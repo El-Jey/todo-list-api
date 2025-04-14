@@ -22,7 +22,7 @@ RESTful API for task management (todo list), developed with Go using Fiber frame
 
 1. Clone the repository:
    ```
-   git clone https://github.com/yourusername/todo-list-api.git
+   git clone https://github.com/El-Jey/todo-list-api.git
    cd todo-list-api
    ```
 
