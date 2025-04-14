@@ -16,7 +16,6 @@ RESTful API for task management (todo list), developed with Go using Fiber frame
 
 - Go 1.23+
 - PostgreSQL 16+
-- Docker (optional)
 
 ### Installation
 
