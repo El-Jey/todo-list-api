@@ -1,0 +1,12 @@
+db:
+  host: 127.127.126.49
+  port: 5432
+  user: postgres
+  password:
+  database: todos
+  migrations_table: "migrations_log"
+
+server:
+  api:
+    host: 127.0.0.1
+    port: 8081

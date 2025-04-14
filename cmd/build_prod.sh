@@ -1,0 +1,1 @@
+go build -o build/todo-list cmd/server/api/api.go
