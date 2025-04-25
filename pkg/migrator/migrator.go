@@ -33,7 +33,7 @@ func NewMigrator(sqlFiles embed.FS, config config.DB) (*Migrator, error) {
 	}, nil
 }
 
-func (m *Migrator) Migrate(db *pgxpool.Pool) error {
+func (m *Migrator) Migrate(db *pgxpool.Pool) (err error) {
 	driver, err := postgres.WithInstance(stdlib.OpenDBFromPool(db), &postgres.Config{
 		MigrationsTable: m.config.MigrationsTable,
 	})
@@ -51,7 +51,17 @@ func (m *Migrator) Migrate(db *pgxpool.Pool) error {
 		return fmt.Errorf("unable to create migration: %v", err)
 	}
 
-	defer migrator.Close()
+	defer func() {
+		srcErr, dbErr := migrator.Close()
+
+		if srcErr != nil && err == nil {
+			err = fmt.Errorf("source error closing migrator: %v", srcErr)
+		}
+
+		if dbErr != nil && err == nil {
+			err = fmt.Errorf("database error closing migrator: %v", dbErr)
+		}
+	}()
 
 	if err = migrator.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 		return fmt.Errorf("unable to apply migrations %v", err)

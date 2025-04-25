@@ -32,7 +32,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	dbInstance, err := dbInit.InitDB(cfg.DB, ctx)
+	dbInstance, err := dbInit.InitDB(ctx, cfg.DB)
 
 	if err != nil {
 		return err
@@ -44,7 +44,7 @@ func run(ctx context.Context) error {
 		return err
 	}
 
-	srv := apiServer.NewServer(&cfg, dbInstance, ctx)
+	srv := apiServer.NewServer(dbInstance)
 
 	go func() {
 		if err := srv.Listen(fmt.Sprintf("%s:%s", cfg.Server.API.Host, cfg.Server.API.Port)); err != nil {

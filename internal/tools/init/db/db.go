@@ -7,8 +7,8 @@ import (
 	"todo-list/internal/pkg/store/db"
 )
 
-func InitDB(config config.DB, ctx context.Context) (*db.DB, error) {
-	dbInstance, err := db.NewDB(config, ctx)
+func InitDB(ctx context.Context, config config.DB) (*db.DB, error) {
+	dbInstance, err := db.NewDB(ctx, config)
 
 	if err != nil {
 		return nil, err

@@ -16,7 +16,7 @@ type DB struct {
 	config config.DB
 }
 
-func connect(dsn string, ctx context.Context) (*pgxpool.Pool, error) {
+func connect(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	dbPool, err := pgxpool.New(ctx, dsn)
 
 	if err != nil {
@@ -30,7 +30,7 @@ func connect(dsn string, ctx context.Context) (*pgxpool.Pool, error) {
 	return dbPool, nil
 }
 
-func NewDB(config config.DB, ctx context.Context) (*DB, error) {
+func NewDB(ctx context.Context, config config.DB) (*DB, error) {
 	db := &DB{
 		config: config,
 		conn:   nil,
@@ -38,7 +38,7 @@ func NewDB(config config.DB, ctx context.Context) (*DB, error) {
 
 	dsn := db.GetDSN()
 
-	conn, err := connect(dsn, ctx)
+	conn, err := connect(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
@@ -52,9 +52,8 @@ func (db *DB) Connection() *pgxpool.Pool {
 	return db.conn
 }
 
-func (db *DB) Close() error {
+func (db *DB) Close() {
 	db.conn.Close()
-	return nil
 }
 
 func (db *DB) GetDSN() string {
