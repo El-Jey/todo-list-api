@@ -65,16 +65,25 @@ func (db *DB) Insert(table string, columns []string, values []any) (pgx.Rows, er
 		return nil, fmt.Errorf("columns and values length mismatch")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (%s) VALUES ", table, strings.Join(columns, ", "))
+	var q strings.Builder
+
+	q.WriteString(fmt.Sprintf("INSERT INTO %s (%s) VALUES ", table, strings.Join(columns, ", ")))
 	args := []any{}
 
-	query += "("
+	q.WriteString("(")
+	format := "$%d, "
+	lastIndex := len(values) - 1
 	for i := range values {
-		query += fmt.Sprintf("$%d, ", i+1)
+		if i == lastIndex {
+			format = "$%d"
+		}
+
+		q.WriteString(fmt.Sprintf(format, i+1))
 	}
 
-	query = query[0 : len(query)-2]
-	query += ") RETURNING *"
+	q.WriteString(") RETURNING *")
+
+	query := q.String()
 
 	args = append(args, values...)
 
@@ -88,6 +97,7 @@ func (db *DB) Insert(table string, columns []string, values []any) (pgx.Rows, er
 	return rows, nil
 }
 
+// TODO: Make where clause more flexible (IN, LIKE, OR, etc)
 func (db *DB) Select(table string, columns []string, where map[string]any) (pgx.Rows, error) {
 	// If columns is empty, use "*" as default
 	columnsStr := "*"
@@ -95,24 +105,34 @@ func (db *DB) Select(table string, columns []string, where map[string]any) (pgx.
 		columnsStr = strings.Join(columns, ", ")
 	}
 
+	var q strings.Builder
+
 	args := []any{}
 
-	query := fmt.Sprintf("SELECT %s FROM %s", columnsStr, table)
+	q.WriteString(fmt.Sprintf("SELECT %s FROM %s", columnsStr, table))
 
 	if len(where) > 0 {
-		whereClause := ""
+		var w strings.Builder
+
+		q.WriteString(" WHERE ")
 
 		i := 0
+		format := "%s = $%d AND "
+		lastIndex := len(where) - 1
 		for k, v := range where {
-			whereClause += fmt.Sprintf("%s = $%d AND ", k, i+1)
+			if i == lastIndex {
+				format = "%s = $%d"
+			}
+
+			w.WriteString(fmt.Sprintf(format, k, i+1))
 			args = append(args, v)
 			i++
 		}
 
-		whereClause = whereClause[0 : len(whereClause)-5]
-
-		query += fmt.Sprintf(" WHERE %s", whereClause)
+		q.WriteString(w.String())
 	}
+
+	query := q.String()
 
 	rows, err := db.conn.Query(context.Background(), query, args...)
 
@@ -133,30 +153,48 @@ func (db *DB) Update(table string, columns []string, values []any, where map[str
 		return 0, fmt.Errorf("where is empty")
 	}
 
-	query := fmt.Sprintf("UPDATE %s SET ", table)
+	var q strings.Builder
+
+	q.WriteString(fmt.Sprintf("UPDATE %s SET ", table))
 
 	args := []any{}
 
 	i := 0
+	format := "%s = $%d, "
+	lastIndex := len(values) - 1
 	for _, c := range columns {
-		query += fmt.Sprintf("%s = $%d, ", c, i+1)
+		if i == lastIndex {
+			format = "%s = $%d"
+		}
+
+		q.WriteString(fmt.Sprintf(format, c, i+1))
 		i++
 	}
-
-	query = query[0 : len(query)-2]
 
 	args = append(args, values...)
 
-	whereClause := ""
-	for k, v := range where {
-		whereClause += fmt.Sprintf("%s = $%d AND ", k, i+1)
-		args = append(args, v)
-		i++
+	if len(where) > 0 {
+		var w strings.Builder
+
+		q.WriteString(" WHERE ")
+
+		wi := 0
+		format := "%s = $%d AND "
+		lastIndex := len(where) - 1
+		for k, v := range where {
+			if wi == lastIndex {
+				format = "%s = $%d"
+			}
+
+			w.WriteString(fmt.Sprintf(format, k, i+1))
+			args = append(args, v)
+			wi++
+		}
+
+		q.WriteString(w.String())
 	}
 
-	whereClause = whereClause[0 : len(whereClause)-5]
-
-	query += fmt.Sprintf(" WHERE %s", whereClause)
+	query := q.String()
 
 	stmt, err := db.conn.Exec(context.Background(), query, args...)
 
@@ -173,21 +211,34 @@ func (db *DB) Delete(table string, where map[string]any) (int64, error) {
 		return 0, fmt.Errorf("where is empty")
 	}
 
-	query := fmt.Sprintf("DELETE FROM %s ", table)
+	var q strings.Builder
+
+	q.WriteString(fmt.Sprintf("DELETE FROM %s ", table))
 
 	args := []any{}
 
-	i := 0
-	whereClause := ""
-	for k, v := range where {
-		whereClause += fmt.Sprintf("%s = $%d AND ", k, i+1)
-		args = append(args, v)
-		i++
+	if len(where) > 0 {
+		var w strings.Builder
+
+		q.WriteString(" WHERE ")
+
+		i := 0
+		format := "%s = $%d AND "
+		lastIndex := len(where) - 1
+		for k, v := range where {
+			if i == lastIndex {
+				format = "%s = $%d"
+			}
+
+			w.WriteString(fmt.Sprintf(format, k, i+1))
+			args = append(args, v)
+			i++
+		}
+
+		q.WriteString(w.String())
 	}
 
-	whereClause = whereClause[0 : len(whereClause)-5]
-
-	query += fmt.Sprintf(" WHERE %s", whereClause)
+	query := q.String()
 
 	stmt, err := db.conn.Exec(context.Background(), query, args...)
 
